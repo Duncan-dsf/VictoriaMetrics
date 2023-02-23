@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/auth"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/envtemplate"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/logger"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/prompbmarshal"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/promscrape/discovery/consul"
@@ -100,6 +101,11 @@ func (s *Scraper) runScraper() {
 
 // loadContentConfig loads Prometheus config from the configuration content.
 func loadContentConfig(detail []byte, authorizationPath string) (*Config, error) {
+	var err error
+	detail, err = envtemplate.ReplaceBytes(detail)
+	if err != nil {
+		return nil, fmt.Errorf("cannot expand environment variables: %w", err)
+	}
 	var cfgObj Config
 	if err := cfgObj.unmarshal(detail, false); err != nil {
 		return nil, fmt.Errorf("cannot unmarshal data: %w", err)
