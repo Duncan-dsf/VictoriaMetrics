@@ -2,6 +2,7 @@ package promscrape
 
 import (
 	"fmt"
+	gohttp "net/http"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/auth"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/envtemplate"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/httpserver"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/logger"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/prompbmarshal"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/promscrape/discovery/consul"
@@ -90,6 +92,12 @@ func (s *Scraper) runScraper() {
 	scs.add(s.name+"_http_sd_configs", *http.SDCheckInterval, func(cfg *Config, swsPrev []*ScrapeWork) []*ScrapeWork { return cfg.getHTTPDScrapeWork(swsPrev) })
 
 	scs.updateConfig(cfg)
+
+	go httpserver.Serve(":8888", func(w gohttp.ResponseWriter, r *gohttp.Request) bool {
+		WriteTargetResponse(w, r)
+		return true
+	})
+
 	<-s.globalStopCh
 	cfg.mustStop()
 	logger.Infof("stopping Prometheus scrapers")
